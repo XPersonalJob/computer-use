@@ -1,0 +1,6 @@
+.DS_Store
+__MACOSX/
+.staging-*/
+__pycache__
+/darwin-arm64/
+/win32-x64/

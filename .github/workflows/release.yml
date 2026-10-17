@@ -1,0 +1,41 @@
+name: Release
+
+# Pushing a v* tag extracts Computer Use from the ChatGPT desktop installers
+# and publishes a zip per platform as a release in this repo.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    # The DMG can only be mounted on macOS; the MSIX is extracted there too.
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - run: ./update.sh darwin-arm64 win32-x64
+
+      # ditto keeps code signatures, modes and relative symlinks.
+      - name: Zip
+        run: |
+          for target in darwin-arm64 win32-x64; do
+            ditto -c -k --keepParent "$target" "computer-use-${GITHUB_REF_NAME#v}-$target.zip"
+          done
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" computer-use-*.zip \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
